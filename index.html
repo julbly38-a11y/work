@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Upwork: вакансії</title>
+<style>
+  :root {
+    --bg: #f4f1ea; --card: #fffdf8; --text: #1d1d1b; --muted: #6f6b61; --border: #e4dfd3;
+    --accent: #2f6b4f; --sel: #e3efe7; --tile: #ebe6da;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #161815; --card: #1e211d; --text: #ece9e1; --muted: #9a968a; --border: #31342e; --accent: #7fc4a0; --sel: #26352c; --tile: #2a2d27; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 system-ui, sans-serif; }
+  .mono { font-family: ui-monospace, Menlo, monospace; }
+  main { max-width: 1280px; margin: 0 auto; padding: 24px 16px 48px; }
+  header { display: flex; justify-content: space-between; align-items: baseline; }
+  h1 { margin: 0 0 16px; font-size: 24px; }
+  #count { color: var(--muted); font-size: 13px; }
+  .filters { display: flex; gap: 12px; margin-bottom: 16px; }
+  input, select { font: inherit; color: inherit; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
+  input { flex: 1; min-width: 0; }
+  .layout { display: grid; grid-template-columns: minmax(280px, 400px) 1fr; gap: 16px; align-items: start; }
+  #list { background: var(--card); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; max-height: calc(100vh - 160px); overflow-y: auto; }
+  .item { display: block; width: 100%; text-align: left; font: inherit; color: inherit; background: none; border: 0; border-bottom: 1px solid var(--border); border-left: 3px solid transparent; padding: 12px 14px; cursor: pointer; }
+  .item:hover { background: var(--bg); }
+  .item.on { background: var(--sel); border-left-color: var(--accent); }
+  .item b { font-weight: 600; display: block; }
+  .item small { color: var(--muted); font-size: 12px; }
+  #detail { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 20px; position: sticky; top: 16px; max-height: calc(100vh - 160px); overflow-y: auto; }
+  #detail h2 { margin: 0 0 4px; font-size: 20px; }
+  .top { display: flex; justify-content: space-between; gap: 12px; }
+  .top a { color: var(--accent); white-space: nowrap; font-size: 14px; }
+  .meta { color: var(--muted); font-size: 13px; margin-bottom: 16px; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin-bottom: 20px; }
+  .tile { background: var(--tile); border-radius: 6px; padding: 6px 10px; }
+  .tile span { display: block; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .cols h3 { margin: 0 0 8px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; font-weight: 500; }
+  .cols p { margin: 0; white-space: pre-wrap; }
+  .empty { color: var(--muted); padding: 24px; text-align: center; }
+  @media (max-width: 800px) {
+    .layout { grid-template-columns: 1fr; }
+    #list, #detail { max-height: none; position: static; }
+    .cols { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header><h1>Upwork: вакансії</h1><span id="count" class="mono"></span></header>
+  <div class="filters">
+    <input id="q" placeholder="Пошук: назва, запит, оплата">
+    <select id="country"><option value="">Усі країни клієнта</option></select>
+  </div>
+  <div class="layout">
+    <div id="list"></div>
+    <article id="detail"></article>
+  </div>
+</main>
+
+<script>
+// Дані з Upwork (конектор, 14 жовт. 2026). Опис обрізаний до початку; повний можна отримати через find_jobs get.
+const JOBS = [
+ {
+  "id": "2110302111305413102",
+  "title": "Senior AI Developer / White-Label Medical AI Chatbot Like Doctronic.ai & Hoss.care | HIPAA",
+  "pay": "$2,000 фікс.",
+  "country": "United States",
+  "date": "2026-10-14",
+  "proposals": "10 to 15",
+  "url": "https://www.upwork.com/jobs/~022110302111305413102",
+  "client": {
+   "RATING": 5,
+   "HIRES": 19,
+   "REVIEWS": 7,
+   "SPENT": "$56,094.89"
+  },
+  "en": "We’re looking for an experienced AI developer or development team to build a production-ready, white-label AI medical chatbot platform similar to Doctronic.ai and Hoss.care. We operate multiple telehealth brands and want one centralized ...",
+  "uk": ""
+ },
+ {
+  "id": "2110301790931890670",
+  "title": "Adding Zyte code to download PDFs",
+  "pay": "$125 фікс.",
+  "country": "United States",
+  "date": "2026-10-14",
+  "proposals": "Fewer than 5",
+  "url": "https://www.upwork.com/jobs/~022110301790931890670",
+  "client": {
+   "RATING": 4.91,
+   "HIRES": 795,
+   "REVIEWS": 440,
+   "SPENT": "$1,196,200.26"
+  },
+  "en": "I have something that downloads PDFs and I need Zyte to work with it to get past the captcha. Struggling with the AI to do it so I need someone that can step in and do it.",
+  "uk": ""
+ },
+ {
+  "id": "2110300929423386593",
+  "title": "Custom Depop New Listing Notification Tool",
+  "pay": "ставка не вказана",
+  "country": "Japan",
+  "date": "2026-10-14",
+  "proposals": "Fewer than 5",
+  "url": "https://www.upwork.com/jobs/~022110300929423386593",
+  "client": {},
+  "en": "Project Overview: I am looking for a professional to develop a custom notification tool that alerts me to new listings on Depop. I am based in Japan and regularly source items from Depop. I have tried various exi...",
+  "uk": ""
+ },
+ {
+  "id": "2110296906064652258",
+  "title": "Python Web Scraping for 50K Products",
+  "pay": "ставка не вказана",
+  "country": "Egypt",
+  "date": "2026-10-14",
+  "proposals": "20 to 50",
+  "url": "https://www.upwork.com/jobs/~022110296906064652258",
+  "client": {},
+  "en": "I’m looking for an experienced Python web scraping developer to extract approximately 50K products from a website and save the results into a clean, well-organized CSV file. More details will be shared.",
+  "uk": ""
+ },
+ {
+  "id": "2110295343438948322",
+  "title": "AI Browser Automation Developer – Real Estate Workflow Prototype (Hey Opti)",
+  "pay": "ставка не вказана",
+  "country": "Australia",
+  "date": "2026-10-14",
+  "proposals": "20 to 50",
+  "url": "https://www.upwork.com/jobs/~022110295343438948322",
+  "client": {},
+  "en": "I'm developing Hey Opti, an AI-powered real estate operations assistant designed to replicate the manual workflows I currently perform a...",
+  "uk": ""
+ },
+ {
+  "id": "2110286603624701853",
+  "title": "Data set review and analysis",
+  "pay": "$100 фікс.",
+  "country": "Sweden",
+  "date": "2026-10-14",
+  "proposals": "20 to 50",
+  "url": "https://www.upwork.com/jobs/~022110286603624701853",
+  "client": {},
+  "en": "Looking for a data analyst to review a dataset, identify key trends and patterns, and present the findings in a clear, professional report. The report should not be more than 10 pages - must have charts, tables, or graphs, key findings, con...",
+  "uk": ""
+ },
+ {
+  "id": "2110282609078752801",
+  "title": "Forward deplyoed Engineer - EDE",
+  "pay": "$15–50/год",
+  "country": "UAE",
+  "date": "2026-10-14",
+  "proposals": "5 to 10",
+  "url": "https://www.upwork.com/jobs/~022110282609078752801",
+  "client": {},
+  "en": "Forward Deployed Engineer (Freelance or Full-Time) | AI Agents & Automation | Dubai. We are a Dubai-based AI execution partner helping operations-heavy and regulated businesses automate the work that slows them down. We take client...",
+  "uk": ""
+ },
+ {
+  "id": "2110280989083981439",
+  "title": "AI Engineer / Data Architect for Clinical Trials AI Assistant",
+  "pay": "$50–60/год",
+  "country": "UK",
+  "date": "2026-10-14",
+  "proposals": "20 to 50",
+  "url": "https://www.upwork.com/jobs/~022110280989083981439",
+  "client": {
+   "RATING": 5,
+   "HIRES": 7,
+   "REVIEWS": 5,
+   "SPENT": "$5,538.85"
+  },
+  "en": "We’re building AI assistants for clinical trials and need an engineer who can design both the data architecture and the AI layer on top of it. Must have: proven experience building AI solutions, especially AI assistants (LLMs, RAG, agen...",
+  "uk": ""
+ },
+ {
+  "id": "2110280469317530094",
+  "title": "AI Receptionist Optimization and Troubleshooting",
+  "pay": "$15 фікс.",
+  "country": "United States",
+  "date": "2026-10-14",
+  "proposals": "20 to 50",
+  "url": "https://www.upwork.com/jobs/~022110280469317530094",
+  "client": {
+   "RATING": 5,
+   "HIRES": 50,
+   "REVIEWS": 46,
+   "SPENT": "$1,111.00"
+  },
+  "en": "I'm looking for a skilled freelancer to improve an existing AI receptionist system. The goal is to make conversations smoother, improve response quality, and fix unexpected behavior.",
+  "uk": ""
+ },
+ {
+  "id": "2110233492591796125",
+  "title": "Informatica",
+  "pay": "$10–35/год",
+  "country": "India",
+  "date": "2026-10-14",
+  "proposals": "Fewer than 5",
+  "url": "https://www.upwork.com/jobs/~022110233492591796125",
+  "client": {},
+  "en": "Works with Solution Architect & BAs on end-to-end solution, evaluate and develop high-quality data solutions. Works with non-technical, subject matter experts to understand underlying data behavior and characteristics in ways that will be ...",
+  "uk": ""
+ }
+];
+
+const $ = id => document.getElementById(id);
+const fmt = d => new Date(d).toLocaleDateString('uk-UA', { day: 'numeric', month: 'short', year: 'numeric' });
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let current = location.hash.slice(1) || JOBS[0]?.id;
+
+$('country').insertAdjacentHTML('beforeend', [...new Set(JOBS.map(j => j.country))].sort().map(c => `<option>${esc(c)}</option>`).join(''));
+
+function filtered() {
+  const q = $('q').value.trim().toLowerCase(), c = $('country').value;
+  return JOBS.filter(j => (!c || j.country === c) && (!q || [j.title, j.pay, j.en, j.uk].join(' ').toLowerCase().includes(q)));
+}
+
+function render() {
+  const list = filtered();
+  $('count').textContent = `${list.length} з ${JOBS.length}`;
+  $('list').innerHTML = list.length ? list.map(j => `
+    <button class="item ${j.id === current ? 'on' : ''}" data-id="${esc(j.id)}">
+      <b>${esc(j.title)}</b><small class="mono">${esc(j.pay)} · ${esc(j.country)} · ${fmt(j.date)}</small>
+    </button>`).join('') : '<div class="empty">Нічого не знайдено</div>';
+
+  const j = JOBS.find(j => j.id === current);
+  if (!j) { $('detail').innerHTML = '<div class="empty">Оберіть вакансію</div>'; return; }
+  const tiles = Object.entries(j.client).map(([k, v]) => `<div class="tile"><span class="mono">${esc(k.toUpperCase())}</span>${esc(v)}</div>`).join('');
+  const link = /^https?:\/\//.test(j.url) ? `<a href="${esc(j.url)}" target="_blank" rel="noopener">Відкрити на Upwork ↗</a>` : '';
+  $('detail').innerHTML = `
+    <div class="top"><h2>${esc(j.title)}</h2>${link}</div>
+    <div class="meta mono">${esc(j.pay)}${j.proposals ? ` · заявок ${esc(j.proposals)}` : ''} · опубліковано ${fmt(j.date)}</div>
+    ${tiles ? `<div class="tiles mono">${tiles}</div>` : ''}
+    <div class="cols">
+      <section><h3 class="mono">Англійська (оригінал)</h3><p>${esc(j.en)}</p></section>
+      <section><h3 class="mono">Українська (переклад)</h3><p>${esc(j.uk)}</p></section>
+    </div>`;
+}
+
+$('list').addEventListener('click', e => {
+  const b = e.target.closest('.item'); if (!b) return;
+  current = b.dataset.id; history.replaceState(null, '', '#' + current); render();
+});
+$('q').addEventListener('input', render);
+$('country').addEventListener('change', render);
+render();
+</script>
+</body>
+</html>
