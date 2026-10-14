@@ -22,6 +22,12 @@
   .filters { display: flex; gap: 12px; margin-bottom: 16px; }
   input, select { font: inherit; color: inherit; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
   input { flex: 1; min-width: 0; }
+  #login { min-height: 100vh; display: grid; place-items: center; padding: 16px; }
+  #login[hidden], main[hidden] { display: none; }
+  #loginForm { display: grid; gap: 10px; width: 100%; max-width: 340px; }
+  #loginForm button, #logout { font: inherit; padding: 10px 12px; border: 0; border-radius: 10px; background: var(--accent); color: var(--card); cursor: pointer; }
+  #logout { background: none; color: var(--muted); padding: 0 0 0 12px; font-size: 13px; }
+  #loginErr { color: #b3261e; margin: 0; min-height: 1.4em; font-size: 14px; }
   .layout { display: grid; grid-template-columns: minmax(280px, 400px) 1fr; gap: 16px; align-items: start; }
   #list { background: var(--card); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; max-height: calc(100vh - 160px); overflow-y: auto; }
   .item { display: block; width: 100%; text-align: left; font: inherit; color: inherit; background: none; border: 0; border-bottom: 1px solid var(--border); border-left: 3px solid transparent; padding: 12px 14px; cursor: pointer; }
@@ -50,8 +56,17 @@
 </style>
 </head>
 <body>
-<main>
-  <header><h1>Upwork: вакансії</h1><span id="count" class="mono"></span></header>
+<div id="login" hidden>
+  <form id="loginForm">
+    <h1>Upwork: вакансії</h1>
+    <input id="email" type="email" placeholder="Email" autocomplete="username" required>
+    <input id="password" type="password" placeholder="Пароль" autocomplete="current-password" required>
+    <button>Увійти</button>
+    <p id="loginErr" role="alert"></p>
+  </form>
+</div>
+<main hidden>
+  <header><h1>Upwork: вакансії</h1><span><span id="count" class="mono"></span><button id="logout" type="button">Вийти</button></span></header>
   <div class="filters">
     <input id="q" placeholder="Пошук: назва, запит, оплата">
     <select id="country"><option value="">Усі країни клієнта</option></select>
@@ -69,16 +84,43 @@ const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>'
 let JOBS = [];
 let current = location.hash.slice(1);
 
-// Спершу живі дані з /api/vacancies (Supabase); локально з file:// — запасний data.js
+const SB = 'https://ubjnztanehqlsrqphdqy.supabase.co', ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InViam56dGFuZWhxbHNycXBoZHF5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMzMzMxNzQsImV4cCI6MjA5ODkwOTE3NH0.f1AkxeeZfO0wAQrrhzWjTTE9NTMrTIc8xILfEPC93p0';
+const store = {
+  get() { try { return JSON.parse(localStorage.getItem('sb-session')); } catch { return null; } },
+  set(v) { try { v ? localStorage.setItem('sb-session', JSON.stringify(v)) : localStorage.removeItem('sb-session'); } catch {} },
+};
+const auth = (path, body) => fetch(SB + '/auth/v1/' + path, { method: 'POST', headers: { apikey: ANON, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+
+async function refresh() {
+  const s = store.get(); if (!s?.refresh_token) return false;
+  const r = await auth('token?grant_type=refresh_token', { refresh_token: s.refresh_token });
+  if (!r.ok) return false;
+  store.set(await r.json()); return true;
+}
+
+function showLogin(msg = '') {
+  document.querySelector('main').hidden = true; $('login').hidden = false; $('loginErr').textContent = msg;
+}
+
+// Живі дані з /api/vacancies (Supabase, лише для власника); локально з file:// — запасний data.js
+async function fetchJobs() {
+  const get = () => fetch('/api/vacancies', { headers: { Authorization: 'Bearer ' + (store.get()?.access_token || '') } });
+  let r = await get();
+  if (r.status === 401 && await refresh()) r = await get();
+  return r;
+}
+
 async function load() {
   try {
-    const r = await fetch('/api/vacancies');
+    const r = await fetchJobs();
+    if (r.status === 401) { store.set(null); return showLogin(); }
     if (!r.ok) throw new Error(r.status);
     JOBS = await r.json();
   } catch {
     await new Promise(ok => { const s = document.createElement('script'); s.src = 'data.js'; s.onload = s.onerror = ok; document.head.append(s); });
     JOBS = window.JOBS_SNAPSHOT || [];
   }
+  $('login').hidden = true; document.querySelector('main').hidden = false;
   JOBS.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
   current = current || JOBS[0]?.id;
   $('country').insertAdjacentHTML('beforeend', [...new Set(JOBS.map(j => j.country))].sort().map(c => `<option>${esc(c)}</option>`).join(''));
@@ -119,6 +161,16 @@ $('list').addEventListener('click', e => {
 });
 $('q').addEventListener('input', render);
 $('country').addEventListener('change', render);
+$('loginForm').addEventListener('submit', async e => {
+  e.preventDefault(); $('loginErr').textContent = '';
+  const r = await auth('token?grant_type=password', { email: $('email').value.trim(), password: $('password').value });
+  if (!r.ok) return showLogin('Невірний email або пароль');
+  store.set(await r.json()); $('password').value = '';
+  const ok = await fetchJobs();
+  if (!ok.ok) { store.set(null); return showLogin('Доступ лише для власника'); }
+  load();
+});
+$('logout').addEventListener('click', () => { store.set(null); location.reload(); });
 load();
 </script>
 </body>
