@@ -22,6 +22,19 @@
   .filters { display: flex; gap: 12px; margin-bottom: 16px; }
   input, select { font: inherit; color: inherit; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
   input { flex: 1; min-width: 0; }
+  .filters.wrap { flex-wrap: wrap; gap: 8px; }
+  .filters.wrap select { padding: 7px 10px; font-size: 13px; }
+  #reset { font: inherit; font-size: 13px; background: none; border: 1px solid var(--border); color: var(--muted); border-radius: 10px; padding: 7px 12px; cursor: pointer; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+  .chip { font: inherit; font-size: 12px; background: var(--card); color: var(--text); border: 1px solid var(--border); border-radius: 999px; padding: 3px 11px; cursor: pointer; }
+  .chip b { color: var(--muted); font-weight: 500; margin-left: 4px; }
+  .chip.on { background: var(--accent); color: var(--card); border-color: var(--accent); }
+  .chip.on b { color: inherit; }
+  .badges { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+  .badges span { background: var(--tile); border-radius: 4px; padding: 0 6px; font-size: 11px; color: var(--muted); }
+  .badges .hot { background: var(--sel); color: var(--accent); }
+  .item .row { display: flex; justify-content: space-between; gap: 8px; }
+  .item .go { color: var(--accent); font-size: 12px; white-space: nowrap; text-decoration: none; }
   #login { min-height: 100vh; display: grid; place-items: center; padding: 16px; }
   #login[hidden], main[hidden] { display: none; }
   #loginForm { display: grid; gap: 10px; width: 100%; max-width: 340px; }
@@ -83,6 +96,17 @@
     <input id="q" placeholder="Пошук: назва, запит, оплата">
     <select id="country"><option value="">Усі країни клієнта</option></select>
   </div>
+  <div class="filters wrap">
+    <select id="ftype"><option value="">Тип оплати</option><option value="hourly">Погодинно</option><option value="fixed">Фікс</option></select>
+    <select id="fbudget"><option value="">Бюджет</option></select>
+    <select id="ftopic"><option value="">Тема</option></select>
+    <select id="fprop"><option value="">Конкуренція</option></select>
+    <select id="fclient"><option value="">Клієнт</option></select>
+    <select id="fperiod"><option value="">Увесь період</option><option value="7">7 днів</option><option value="30">30 днів</option><option value="90">90 днів</option></select>
+    <select id="fsort"><option value="date">Спершу нові</option><option value="best">Кращі можливості</option><option value="budget">Найбільший бюджет</option><option value="prop">Найменше заявок</option></select>
+    <button id="reset" type="button">Скинути</button>
+  </div>
+  <div id="chips" class="chips"></div>
   <div class="layout">
     <div id="list"></div>
     <article id="detail"></article>
@@ -141,21 +165,79 @@ async function load() {
   $('login').hidden = true; document.querySelector('main').hidden = false;
   JOBS.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
   current = current || JOBS[0]?.id;
+  JOBS.forEach(enrich);
   $('country').insertAdjacentHTML('beforeend', [...new Set(JOBS.map(j => j.country))].sort().map(c => `<option>${esc(c)}</option>`).join(''));
+  const opts = (id, arr) => $(id).insertAdjacentHTML('beforeend', arr.map(v => `<option>${esc(v)}</option>`).join(''));
+  opts('fbudget', [...FIXED, ...HOURLY, NOBUDGET]); opts('ftopic', TOPICS.map(t => t[0])); opts('fprop', PROPS); opts('fclient', CLIENTS);
   render();
 }
 
-function filtered() {
-  const q = $('q').value.trim().toLowerCase(), c = $('country').value;
-  return JOBS.filter(j => (!c || j.country === c) && (!q || [j.title, j.title_uk, j.pay, j.en, j.uk].join(' ').toLowerCase().includes(q)));
+// ---- Категоризація (на клієнті, з наявних полів) ----
+const FIXED = ['Фікс < $100', 'Фікс $100–299', 'Фікс $300–499', 'Фікс $500–999', 'Фікс $1k+'];
+const HOURLY = ['Ставка < $15/год', 'Ставка $15–29/год', 'Ставка $30–49/год', 'Ставка $50+/год'];
+const NOBUDGET = 'Бюджет не вказано';
+const PROPS = ['Fewer than 5', '5 to 10', '10 to 15', '15 to 20', '20 to 50', '50+'];
+const CLIENTS = ['Сильний клієнт', 'Перевірений клієнт', 'Новий клієнт'];
+const TOPICS = [
+  ['HIPAA / безпека', /hipaa|\bphi\b|complian|privacy|security/i],
+  ['EHR / athenahealth / FHIR', /\behr\b|\bemr\b|athena|epic\b|cerner|fhir|hl7|interoperab/i],
+  ['Data engineering / ETL', /data engineer|\betl\b|\belt\b|pipeline|airflow|\bdbt\b|warehouse|snowflake|bigquery|databricks/i],
+  ['Supabase / Postgres / SQL', /supabase|postgres|\bsql\b|row.level|database/i],
+  ['Веб (Next.js / React)', /next\.?js|react|full.?stack|web app|front.?end|node/i],
+  ['AI / LLM / автоматизація', /\bai\b|llm|gpt|claude|openai|machine learning|agent|automation|chatbot/i],
+  ['Скрейпінг / парсинг', /scrap|crawl|extract|parsing/i],
+  ['Аналітика / BI', /analytic|dashboard|power bi|tableau|looker|reporting|\bbi\b/i],
+  ['Клінічна / медична сфера', /clinical|medical|health|physician|patient|trial|pharma|hospital/i],
+];
+const KEYS = [['HIPAA', /hipaa|\bphi\b/i], ['athenahealth', /athena/i], ['FHIR', /fhir|hl7/i], ['Supabase', /supabase/i], ['Postgres', /postgres/i], ['Next.js', /next\.?js/i], ['Python', /python/i]];
+
+function enrich(j) {
+  const nums = (j.pay.match(/\d[\d,]*\.?\d*/g) || []).map(n => parseFloat(n.replace(/,/g, '')));
+  const hi = nums.length ? Math.max(...nums) : 0;
+  j._hourly = j.type ? j.type === 'hourly' : /год/.test(j.pay);
+  j._hi = hi;
+  j._budget = !nums.length ? NOBUDGET
+    : j._hourly ? HOURLY[hi < 15 ? 0 : hi < 30 ? 1 : hi < 50 ? 2 : 3]
+    : FIXED[hi < 100 ? 0 : hi < 300 ? 1 : hi < 500 ? 2 : hi < 1000 ? 3 : 4];
+  const text = [j.title, j.en.slice(0, 1500)].join(' ');
+  j._topics = TOPICS.filter(t => t[1].test(text)).map(t => t[0]);
+  j._keys = KEYS.filter(k => k[1].test(text)).map(k => k[0]);
+  const spent = Number(j.client.spent_usd) || 0, hire = Number(j.client.hire_rate_pct) || 0;
+  j._client = spent >= 10000 && hire >= 60 ? CLIENTS[0] : spent >= 1000 ? CLIENTS[1] : CLIENTS[2];
+  j._prop = PROPS.includes(j.proposals) ? j.proposals : '';
+  j._age = j.date ? (Date.now() - new Date(j.date)) / 864e5 : 9999;
+  j._score = ({ 'Fewer than 5': 3, '5 to 10': 2, '10 to 15': 1 }[j.proposals] || 0)
+    + (j._client === CLIENTS[0] ? 2 : j._client === CLIENTS[1] ? 1 : 0)
+    + ((j._hourly ? hi >= 30 : hi >= 500) ? 2 : 0) + Math.min(j._keys.length, 3);
+}
+
+const FILTERS = { ftype: j => (j._hourly ? 'hourly' : 'fixed'), fbudget: j => j._budget, fprop: j => j._prop, fclient: j => j._client };
+const SORTS = {
+  date: (a, b) => (b.date || '').localeCompare(a.date || ''),
+  best: (a, b) => b._score - a._score || SORTS.date(a, b),
+  budget: (a, b) => (b._hourly ? b._hi * 160 : b._hi) - (a._hourly ? a._hi * 160 : a._hi),
+  prop: (a, b) => (PROPS.indexOf(a.proposals) + 1 || 99) - (PROPS.indexOf(b.proposals) + 1 || 99) || SORTS.date(a, b),
+};
+
+function filtered(skipTopic) {
+  const q = $('q').value.trim().toLowerCase(), c = $('country').value, t = $('ftopic').value, p = +$('fperiod').value;
+  return JOBS.filter(j => (!c || j.country === c)
+    && Object.entries(FILTERS).every(([id, fn]) => !$(id).value || fn(j) === $(id).value)
+    && (skipTopic || !t || j._topics.includes(t))
+    && (!p || j._age <= p)
+    && (!q || [j.title, j.title_uk, j.pay, j.en, j.uk].join(' ').toLowerCase().includes(q)));
 }
 
 function render() {
-  const list = filtered();
+  const list = filtered().sort(SORTS[$('fsort').value]);
   $('count').textContent = `${list.length} з ${JOBS.length}`;
+  const topicCounts = TOPICS.map(t => [t[0], filtered(true).filter(j => j._topics.includes(t[0])).length]);
+  $('chips').innerHTML = topicCounts.map(([n, k]) => `<button class="chip ${$('ftopic').value === n ? 'on' : ''}" data-topic="${esc(n)}">${esc(n)}<b>${k}</b></button>`).join('');
   $('list').innerHTML = list.length ? list.map(j => `
     <button class="item ${j.id === current ? 'on' : ''}" data-id="${esc(j.id)}">
-      <b>${esc(j.title_uk || j.title)}</b><small class="mono">${esc(j.pay)} · ${esc(j.country)} · ${fmt(j.date)}</small>
+      <div class="row"><b>${esc(j.title_uk || j.title)}</b>${/^https?:\/\//.test(j.url) ? `<a class="go" href="${esc(j.url)}" target="_blank" rel="noopener" title="Відкрити на Upwork">↗</a>` : ''}</div>
+      <small class="mono">${esc(j.pay)} · ${esc(j.country)} · ${fmt(j.date)}${j.proposals ? ` · заявок ${esc(j.proposals)}` : ''}</small>
+      <div class="badges">${j._score >= 6 ? '<span class="hot">★ кращі</span>' : ''}${[...j._topics.slice(0, 2), ...j._keys].map(x => `<span>${esc(x)}</span>`).join('')}</div>
     </button>`).join('') : '<div class="empty">Нічого не знайдено</div>';
 
   const j = JOBS.find(j => j.id === current);
@@ -177,8 +259,16 @@ $('list').addEventListener('click', e => {
   const b = e.target.closest('.item'); if (!b) return;
   current = b.dataset.id; history.replaceState(null, '', '#' + current); render();
 });
-$('q').addEventListener('input', render);
-$('country').addEventListener('change', render);
+$('chips').addEventListener('click', e => {
+  const b = e.target.closest('.chip'); if (!b) return;
+  $('ftopic').value = $('ftopic').value === b.dataset.topic ? '' : b.dataset.topic; render();
+});
+$('reset').addEventListener('click', () => {
+  ['q', 'country', 'ftype', 'fbudget', 'ftopic', 'fprop', 'fclient', 'fperiod'].forEach(id => $(id).value = '');
+  $('fsort').value = 'date'; render();
+});
+['q'].forEach(id => $(id).addEventListener('input', render));
+['country', 'ftype', 'fbudget', 'ftopic', 'fprop', 'fclient', 'fperiod', 'fsort'].forEach(id => $(id).addEventListener('change', render));
 let MARKET = null;
 async function loadMarket() {
   if (!MARKET) {

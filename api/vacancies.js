@@ -1,5 +1,5 @@
 // Читає upwork_vacancies із Supabase ключем власника. Ключ лишається на сервері.
-const COLS = 'id,title,title_uk,budget,type,client_country,proposals,published,url,description_en,description_uk,client_info';
+const COLS = 'id,type,title,title_uk,budget,type,client_country,proposals,published,url,description_en,description_uk,client_info';
 
 function pay(x) {
   if (!x.budget) return 'не вказано';
@@ -24,7 +24,7 @@ export default async function handler(req, res) {
   const jobs = rows.map(x => {
     const { recent_reviews, country, ...client } = x.client_info || {};
     for (const k in client) if (client[k] == null) delete client[k];
-    return { id: x.id, title: x.title, title_uk: x.title_uk || '', pay: pay(x), country: x.client_country || '—', date: x.published, proposals: x.proposals || '', url: x.url || '', client, en: x.description_en || '', uk: x.description_uk || '' };
+    return { id: x.id, type: x.type || '', title: x.title, title_uk: x.title_uk || '', pay: pay(x), country: x.client_country || '—', date: x.published, proposals: x.proposals || '', url: x.url || '', client, en: x.description_en || '', uk: x.description_uk || '' };
   });
   res.status(200).json(jobs);
 }
