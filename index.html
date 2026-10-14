@@ -28,6 +28,16 @@
   #loginForm button, #logout { font: inherit; padding: 10px 12px; border: 0; border-radius: 10px; background: var(--accent); color: var(--card); cursor: pointer; }
   #logout { background: none; color: var(--muted); padding: 0 0 0 12px; font-size: 13px; }
   #loginErr { color: #b3261e; margin: 0; min-height: 1.4em; font-size: 14px; }
+  .tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+  .tab { font: inherit; background: var(--card); color: var(--text); border: 1px solid var(--border); border-radius: 999px; padding: 6px 16px; cursor: pointer; }
+  .tab.on { background: var(--accent); color: var(--card); border-color: var(--accent); }
+  #marketView[hidden], #upworkView[hidden] { display: none; }
+  .post { display: block; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; margin-bottom: 8px; color: inherit; text-decoration: none; }
+  .post:hover { border-color: var(--accent); }
+  .post b { display: block; font-weight: 600; }
+  .post small { color: var(--muted); font-size: 12px; }
+  .post .tags { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 4px; }
+  .post .tags span { background: var(--tile); border-radius: 4px; padding: 1px 6px; font-size: 11px; }
   .layout { display: grid; grid-template-columns: minmax(280px, 400px) 1fr; gap: 16px; align-items: start; }
   #list { background: var(--card); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; max-height: calc(100vh - 160px); overflow-y: auto; }
   .item { display: block; width: 100%; text-align: left; font: inherit; color: inherit; background: none; border: 0; border-bottom: 1px solid var(--border); border-left: 3px solid transparent; padding: 12px 14px; cursor: pointer; }
@@ -66,7 +76,9 @@
   </form>
 </div>
 <main hidden>
-  <header><h1>Upwork: вакансії</h1><span><span id="count" class="mono"></span><button id="logout" type="button">Вийти</button></span></header>
+  <header><h1>Вакансії</h1><span><span id="count" class="mono"></span><button id="logout" type="button">Вийти</button></span></header>
+  <nav class="tabs"><button class="tab on" data-tab="upwork">Upwork</button><button class="tab" data-tab="market">Ринок праці</button></nav>
+  <div id="upworkView">
   <div class="filters">
     <input id="q" placeholder="Пошук: назва, запит, оплата">
     <select id="country"><option value="">Усі країни клієнта</option></select>
@@ -75,6 +87,12 @@
     <div id="list"></div>
     <article id="detail"></article>
   </div>
+  </div>
+  <section id="marketView" hidden>
+    <div class="filters"><input id="mq" placeholder="Пошук: назва, компанія, тег"><select id="msrc"><option value="">Усі джерела</option></select></div>
+    <p id="mstate" class="meta mono"></p>
+    <div id="mlist"></div>
+  </section>
 </main>
 
 <script>
@@ -161,6 +179,41 @@ $('list').addEventListener('click', e => {
 });
 $('q').addEventListener('input', render);
 $('country').addEventListener('change', render);
+let MARKET = null;
+async function loadMarket() {
+  if (!MARKET) {
+    const get = () => fetch('/api/market', { headers: { Authorization: 'Bearer ' + (store.get()?.access_token || '') } });
+    let r = await get();
+    if (r.status === 401 && await refresh()) r = await get();
+    if (r.status === 401) { store.set(null); return showLogin(); }
+    MARKET = r.ok ? await r.json() : { postings: [], state: null };
+    $('msrc').insertAdjacentHTML('beforeend', [...new Set(MARKET.postings.map(p => p.source))].sort().map(c => `<option>${esc(c)}</option>`).join(''));
+  }
+  renderMarket();
+}
+function renderMarket() {
+  const q = $('mq').value.trim().toLowerCase(), src = $('msrc').value;
+  const list = MARKET.postings.filter(p => (!src || p.source === src) && (!q || [p.title, p.title_uk, p.company, (p.tags || []).join(' ')].join(' ').toLowerCase().includes(q)));
+  const st = MARKET.state;
+  $('mstate').textContent = `${list.length} з ${MARKET.postings.length}` + (st?.last_run ? ` · оновлено ${new Date(st.last_run).toLocaleString('uk-UA')} · нових за запуск: ${st.last_new ?? 0}` : '');
+  $('mlist').innerHTML = list.length ? list.map(p => `
+    <a class="post" href="${/^https?:\/\//.test(p.url) ? esc(p.url) : '#'}" target="_blank" rel="noopener">
+      <b>${esc(p.title_uk || p.title)}</b>
+      <small class="mono">${[p.title_uk ? p.title : '', p.company, p.location, p.salary, p.source, p.posted_at ? fmt(p.posted_at) : ''].filter(Boolean).map(esc).join(' · ')}</small>
+      ${(p.matched || []).length ? `<div class="tags">${p.matched.map(m => `<span>${esc(m)}</span>`).join('')}</div>` : ''}
+    </a>`).join('') : '<div class="empty">Нічого не знайдено</div>';
+}
+document.querySelector('.tabs').addEventListener('click', e => {
+  const t = e.target.closest('.tab'); if (!t) return;
+  document.querySelectorAll('.tab').forEach(b => b.classList.toggle('on', b === t));
+  const market = t.dataset.tab === 'market';
+  $('upworkView').hidden = market; $('marketView').hidden = !market;
+  $('count').style.display = market ? 'none' : '';
+  if (market) loadMarket();
+});
+$('mq').addEventListener('input', () => MARKET && renderMarket());
+$('msrc').addEventListener('change', () => MARKET && renderMarket());
+
 $('loginForm').addEventListener('submit', async e => {
   e.preventDefault(); $('loginErr').textContent = '';
   const r = await auth('token?grant_type=password', { email: $('email').value.trim(), password: $('password').value });
