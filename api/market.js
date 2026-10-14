@@ -1,6 +1,6 @@
 import { isOwner } from './_owner.js';
 
-const COLS = 'source,ext_id,title,title_uk,company,location,remote,salary,tags,url,posted_at,matched,first_seen';
+const COLS = 'source,ext_id,title,title_uk,company,location,remote,salary,tags,url,posted_at,matched,first_seen,description_en,description_uk';
 
 // Знахідки моніторингу ринку праці (job_market_postings) — лише для власника.
 export default async function handler(req, res) {

@@ -47,6 +47,11 @@
   #marketView[hidden], #upworkView[hidden] { display: none; }
   .post { display: block; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; margin-bottom: 8px; color: inherit; text-decoration: none; }
   .post:hover { border-color: var(--accent); }
+  .post summary { cursor: pointer; list-style: none; }
+  .post summary::-webkit-details-marker { display: none; }
+  .post .body { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+  .post .body > a { display: inline-block; margin-bottom: 12px; color: var(--accent); font-size: 14px; }
+  .post .body .cols p { font-size: 14px; }
   .post b { display: block; font-weight: 600; }
   .post small { color: var(--muted); font-size: 12px; }
   .post .tags { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 4px; }
@@ -287,11 +292,20 @@ function renderMarket() {
   const st = MARKET.state;
   $('mstate').textContent = `${list.length} з ${MARKET.postings.length}` + (st?.last_run ? ` · оновлено ${new Date(st.last_run).toLocaleString('uk-UA')} · нових за запуск: ${st.last_new ?? 0}` : '');
   $('mlist').innerHTML = list.length ? list.map(p => `
-    <a class="post" href="${/^https?:\/\//.test(p.url) ? esc(p.url) : '#'}" target="_blank" rel="noopener">
-      <b>${esc(p.title_uk || p.title)}</b>
-      <small class="mono">${[p.title_uk ? p.title : '', p.company, p.location, p.salary, p.source, p.posted_at ? fmt(p.posted_at) : ''].filter(Boolean).map(esc).join(' · ')}</small>
-      ${(p.matched || []).length ? `<div class="tags">${p.matched.map(m => `<span>${esc(m)}</span>`).join('')}</div>` : ''}
-    </a>`).join('') : '<div class="empty">Нічого не знайдено</div>';
+    <details class="post">
+      <summary>
+        <b>${esc(p.title_uk || p.title)}</b>
+        <small class="mono">${[p.title_uk ? p.title : '', p.company, p.location, p.salary, p.source, p.posted_at ? fmt(p.posted_at) : ''].filter(Boolean).map(esc).join(' · ')}</small>
+        ${(p.matched || []).length ? `<div class="tags">${p.matched.map(m => `<span>${esc(m)}</span>`).join('')}</div>` : ''}
+      </summary>
+      <div class="body">
+        ${/^https?:\/\//.test(p.url) ? `<a href="${esc(p.url)}" target="_blank" rel="noopener">Відкрити оригінал ↗</a>` : ''}
+        ${p.description_uk || p.description_en ? `<div class="cols">
+          <section><h3 class="mono">Англійська (оригінал)</h3><p>${esc(p.description_en || '')}</p></section>
+          <section><h3 class="mono">Українська (переклад)</h3><p>${p.description_uk ? esc(p.description_uk) : '<i>переклад ще не готовий</i>'}</p></section>
+        </div>` : '<p class="meta">Опису немає</p>'}
+      </div>
+    </details>`).join('') : '<div class="empty">Нічого не знайдено</div>';
 }
 document.querySelector('.tabs').addEventListener('click', e => {
   const t = e.target.closest('.tab'); if (!t) return;
