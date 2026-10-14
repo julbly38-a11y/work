@@ -62,156 +62,27 @@
 </main>
 
 <script>
-// Дані з Upwork (конектор, 14 жовт. 2026). Опис обрізаний до початку; повний можна отримати через find_jobs get.
-const JOBS = [
- {
-  "id": "2110302111305413102",
-  "title": "Senior AI Developer / White-Label Medical AI Chatbot Like Doctronic.ai & Hoss.care | HIPAA",
-  "pay": "$2,000 фікс.",
-  "country": "United States",
-  "date": "2026-10-14",
-  "proposals": "10 to 15",
-  "url": "https://www.upwork.com/jobs/~022110302111305413102",
-  "client": {
-   "RATING": 5,
-   "HIRES": 19,
-   "REVIEWS": 7,
-   "SPENT": "$56,094.89"
-  },
-  "en": "We’re looking for an experienced AI developer or development team to build a production-ready, white-label AI medical chatbot platform similar to Doctronic.ai and Hoss.care. We operate multiple telehealth brands and want one centralized ...",
-  "uk": ""
- },
- {
-  "id": "2110301790931890670",
-  "title": "Adding Zyte code to download PDFs",
-  "pay": "$125 фікс.",
-  "country": "United States",
-  "date": "2026-10-14",
-  "proposals": "Fewer than 5",
-  "url": "https://www.upwork.com/jobs/~022110301790931890670",
-  "client": {
-   "RATING": 4.91,
-   "HIRES": 795,
-   "REVIEWS": 440,
-   "SPENT": "$1,196,200.26"
-  },
-  "en": "I have something that downloads PDFs and I need Zyte to work with it to get past the captcha. Struggling with the AI to do it so I need someone that can step in and do it.",
-  "uk": ""
- },
- {
-  "id": "2110300929423386593",
-  "title": "Custom Depop New Listing Notification Tool",
-  "pay": "ставка не вказана",
-  "country": "Japan",
-  "date": "2026-10-14",
-  "proposals": "Fewer than 5",
-  "url": "https://www.upwork.com/jobs/~022110300929423386593",
-  "client": {},
-  "en": "Project Overview: I am looking for a professional to develop a custom notification tool that alerts me to new listings on Depop. I am based in Japan and regularly source items from Depop. I have tried various exi...",
-  "uk": ""
- },
- {
-  "id": "2110296906064652258",
-  "title": "Python Web Scraping for 50K Products",
-  "pay": "ставка не вказана",
-  "country": "Egypt",
-  "date": "2026-10-14",
-  "proposals": "20 to 50",
-  "url": "https://www.upwork.com/jobs/~022110296906064652258",
-  "client": {},
-  "en": "I’m looking for an experienced Python web scraping developer to extract approximately 50K products from a website and save the results into a clean, well-organized CSV file. More details will be shared.",
-  "uk": ""
- },
- {
-  "id": "2110295343438948322",
-  "title": "AI Browser Automation Developer – Real Estate Workflow Prototype (Hey Opti)",
-  "pay": "ставка не вказана",
-  "country": "Australia",
-  "date": "2026-10-14",
-  "proposals": "20 to 50",
-  "url": "https://www.upwork.com/jobs/~022110295343438948322",
-  "client": {},
-  "en": "I'm developing Hey Opti, an AI-powered real estate operations assistant designed to replicate the manual workflows I currently perform a...",
-  "uk": ""
- },
- {
-  "id": "2110286603624701853",
-  "title": "Data set review and analysis",
-  "pay": "$100 фікс.",
-  "country": "Sweden",
-  "date": "2026-10-14",
-  "proposals": "20 to 50",
-  "url": "https://www.upwork.com/jobs/~022110286603624701853",
-  "client": {},
-  "en": "Looking for a data analyst to review a dataset, identify key trends and patterns, and present the findings in a clear, professional report. The report should not be more than 10 pages - must have charts, tables, or graphs, key findings, con...",
-  "uk": ""
- },
- {
-  "id": "2110282609078752801",
-  "title": "Forward deplyoed Engineer - EDE",
-  "pay": "$15–50/год",
-  "country": "UAE",
-  "date": "2026-10-14",
-  "proposals": "5 to 10",
-  "url": "https://www.upwork.com/jobs/~022110282609078752801",
-  "client": {},
-  "en": "Forward Deployed Engineer (Freelance or Full-Time) | AI Agents & Automation | Dubai. We are a Dubai-based AI execution partner helping operations-heavy and regulated businesses automate the work that slows them down. We take client...",
-  "uk": ""
- },
- {
-  "id": "2110280989083981439",
-  "title": "AI Engineer / Data Architect for Clinical Trials AI Assistant",
-  "pay": "$50–60/год",
-  "country": "UK",
-  "date": "2026-10-14",
-  "proposals": "20 to 50",
-  "url": "https://www.upwork.com/jobs/~022110280989083981439",
-  "client": {
-   "RATING": 5,
-   "HIRES": 7,
-   "REVIEWS": 5,
-   "SPENT": "$5,538.85"
-  },
-  "en": "We’re building AI assistants for clinical trials and need an engineer who can design both the data architecture and the AI layer on top of it. Must have: proven experience building AI solutions, especially AI assistants (LLMs, RAG, agen...",
-  "uk": ""
- },
- {
-  "id": "2110280469317530094",
-  "title": "AI Receptionist Optimization and Troubleshooting",
-  "pay": "$15 фікс.",
-  "country": "United States",
-  "date": "2026-10-14",
-  "proposals": "20 to 50",
-  "url": "https://www.upwork.com/jobs/~022110280469317530094",
-  "client": {
-   "RATING": 5,
-   "HIRES": 50,
-   "REVIEWS": 46,
-   "SPENT": "$1,111.00"
-  },
-  "en": "I'm looking for a skilled freelancer to improve an existing AI receptionist system. The goal is to make conversations smoother, improve response quality, and fix unexpected behavior.",
-  "uk": ""
- },
- {
-  "id": "2110233492591796125",
-  "title": "Informatica",
-  "pay": "$10–35/год",
-  "country": "India",
-  "date": "2026-10-14",
-  "proposals": "Fewer than 5",
-  "url": "https://www.upwork.com/jobs/~022110233492591796125",
-  "client": {},
-  "en": "Works with Solution Architect & BAs on end-to-end solution, evaluate and develop high-quality data solutions. Works with non-technical, subject matter experts to understand underlying data behavior and characteristics in ways that will be ...",
-  "uk": ""
- }
-];
-
 const $ = id => document.getElementById(id);
 const fmt = d => new Date(d).toLocaleDateString('uk-UA', { day: 'numeric', month: 'short', year: 'numeric' });
 const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let current = location.hash.slice(1) || JOBS[0]?.id;
+let JOBS = [];
+let current = location.hash.slice(1);
 
-$('country').insertAdjacentHTML('beforeend', [...new Set(JOBS.map(j => j.country))].sort().map(c => `<option>${esc(c)}</option>`).join(''));
+// Спершу живі дані з /api/vacancies (Supabase); локально з file:// — запасний data.js
+async function load() {
+  try {
+    const r = await fetch('/api/vacancies');
+    if (!r.ok) throw new Error(r.status);
+    JOBS = await r.json();
+  } catch {
+    await new Promise(ok => { const s = document.createElement('script'); s.src = 'data.js'; s.onload = s.onerror = ok; document.head.append(s); });
+    JOBS = window.JOBS_SNAPSHOT || [];
+  }
+  JOBS.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  current = current || JOBS[0]?.id;
+  $('country').insertAdjacentHTML('beforeend', [...new Set(JOBS.map(j => j.country))].sort().map(c => `<option>${esc(c)}</option>`).join(''));
+  render();
+}
 
 function filtered() {
   const q = $('q').value.trim().toLowerCase(), c = $('country').value;
@@ -246,7 +117,7 @@ $('list').addEventListener('click', e => {
 });
 $('q').addEventListener('input', render);
 $('country').addEventListener('change', render);
-render();
+load();
 </script>
 </body>
 </html>
