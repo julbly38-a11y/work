@@ -95,7 +95,7 @@
 </div>
 <main hidden>
   <header><h1>Вакансії</h1><span><span id="count" class="mono"></span><button id="logout" type="button">Вийти</button></span></header>
-  <nav class="tabs"><button class="tab on" data-tab="upwork">Upwork</button><button class="tab" data-tab="market">Ринок праці</button></nav>
+  <nav class="tabs"><button class="tab on" data-tab="upwork">Upwork</button><button class="tab" data-tab="market">Ринок праці</button><button class="tab" data-tab="clients">Замовники</button></nav>
   <div id="upworkView">
   <div class="filters">
     <input id="q" placeholder="Пошук: назва, запит, оплата">
@@ -117,6 +117,18 @@
     <article id="detail"></article>
   </div>
   </div>
+  <section id="clientsView" hidden>
+    <div class="filters wrap">
+      <input id="cq" placeholder="Пошук: назва, країна, вакансія">
+      <select id="cscore"><option value="">Оцінка</option><option value="5">5</option><option value="4">4 і вище</option><option value="3">3 і вище</option></select>
+      <select id="cfit"><option value="">Відповідність</option><option value="4">4 і вище</option><option value="3">3 і вище</option></select>
+      <select id="ccountry"><option value="">Усі країни</option></select>
+      <select id="csort"><option value="score">За оцінкою</option><option value="spend">За витратами</option><option value="fit">За відповідністю</option><option value="new">Найновіші</option></select>
+      <label class="meta"><input id="cwatch" type="checkbox"> лише «стежити»</label>
+    </div>
+    <p id="cstate" class="meta mono"></p>
+    <div id="clist"></div>
+  </section>
   <section id="marketView" hidden>
     <div class="filters"><input id="mq" placeholder="Пошук: назва, компанія, тег"><select id="msrc"><option value="">Усі джерела</option></select></div>
     <p id="mstate" class="meta mono"></p>
@@ -307,14 +319,57 @@ function renderMarket() {
       </div>
     </details>`).join('') : '<div class="empty">Нічого не знайдено</div>';
 }
+let CLIENT_ROWS = null;
+async function loadClients() {
+  if (!CLIENT_ROWS) {
+    const get = () => fetch('/api/clients', { headers: { Authorization: 'Bearer ' + (store.get()?.access_token || '') } });
+    let r = await get();
+    if (r.status === 401 && await refresh()) r = await get();
+    if (r.status === 401) { store.set(null); return showLogin(); }
+    CLIENT_ROWS = r.ok ? (await r.json()).clients : [];
+    $('ccountry').insertAdjacentHTML('beforeend', [...new Set(CLIENT_ROWS.map(c => c.country).filter(Boolean))].sort().map(c => `<option>${esc(c)}</option>`).join(''));
+  }
+  renderClients();
+}
+const usd = n => n == null ? '—' : '$' + Number(n).toLocaleString('en-US', { maximumFractionDigits: 0 });
+function renderClients() {
+  const q = $('cq').value.trim().toLowerCase(), sc = +$('cscore').value, ft = +$('cfit').value, ct = $('ccountry').value, w = $('cwatch').checked;
+  const jobsText = c => (c.past_jobs || []).map(j => j.title).join(' ');
+  const list = CLIENT_ROWS.filter(c => (!sc || c.score >= sc) && (!ft || c.our_fit >= ft) && (!ct || c.country === ct) && (!w || c.watch)
+    && (!q || [c.display_name, c.country, c.verdict, jobsText(c)].join(' ').toLowerCase().includes(q)));
+  const by = { score: (a, b) => b.score - a.score || (b.spend_total_usd || 0) - (a.spend_total_usd || 0),
+    spend: (a, b) => (b.spend_total_usd || 0) - (a.spend_total_usd || 0),
+    fit: (a, b) => b.our_fit - a.our_fit || b.score - a.score,
+    new: (a, b) => String(b.first_seen).localeCompare(String(a.first_seen)) };
+  list.sort(by[$('csort').value]);
+  $('cstate').textContent = `${list.length} з ${CLIENT_ROWS.length}`;
+  $('clist').innerHTML = list.length ? list.slice(0, 300).map(c => `
+    <details class="post">
+      <summary>
+        <b>${c.watch ? '★ ' : ''}${esc(c.display_name || '—')}</b>
+        <small class="mono">оцінка ${c.score}/5 · відповідність ${c.our_fit}/5 · ${usd(c.spend_total_usd)} · ${[c.feedback_score && c.feedback_score + '★ (' + (c.feedback_count || 0) + ')', c.hire_rate_pct != null && 'hire ' + c.hire_rate_pct + '%', c.country].filter(Boolean).map(esc).join(' · ')}</small>
+      </summary>
+      <div class="body">
+        <p>${esc(c.verdict || '')}</p>
+        ${c.seasonality ? `<p class="meta">Сезонність: ${esc(c.seasonality)}</p>` : ''}
+        ${c.hires_within_minutes != null ? `<p class="meta">Наймає за ~${esc(c.hires_within_minutes)} хв</p>` : ''}
+        <h3 class="mono">Його вакансії (${(c.past_jobs || []).length})</h3>
+        <ul>${(c.past_jobs || []).slice(0, 10).map(j => `<li>${/^https?:\/\//.test(j.url || '') ? `<a href="${esc(j.url)}" target="_blank" rel="noopener">${esc(j.title || '—')} ↗</a>` : esc(j.title || '—')} <small class="mono">${esc([j.date, j.budget].filter(Boolean).join(' · '))}</small></li>`).join('')}</ul>
+        ${c.notes ? `<p class="meta">${esc(c.notes)}</p>` : ''}
+      </div>
+    </details>`).join('') + (list.length > 300 ? '<div class="empty">Показано перші 300; уточніть фільтри</div>' : '') : '<div class="empty">Нічого не знайдено</div>';
+}
 document.querySelector('.tabs').addEventListener('click', e => {
   const t = e.target.closest('.tab'); if (!t) return;
   document.querySelectorAll('.tab').forEach(b => b.classList.toggle('on', b === t));
-  const market = t.dataset.tab === 'market';
-  $('upworkView').hidden = market; $('marketView').hidden = !market;
-  $('count').style.display = market ? 'none' : '';
-  if (market) loadMarket();
+  const tab = t.dataset.tab;
+  $('upworkView').hidden = tab !== 'upwork'; $('marketView').hidden = tab !== 'market'; $('clientsView').hidden = tab !== 'clients';
+  $('count').style.display = tab === 'upwork' ? '' : 'none';
+  if (tab === 'market') loadMarket();
+  if (tab === 'clients') loadClients();
 });
+['cq'].forEach(id => $(id).addEventListener('input', () => CLIENT_ROWS && renderClients()));
+['cscore', 'cfit', 'ccountry', 'csort', 'cwatch'].forEach(id => $(id).addEventListener('change', () => CLIENT_ROWS && renderClients()));
 $('mq').addEventListener('input', () => MARKET && renderMarket());
 $('msrc').addEventListener('change', () => MARKET && renderMarket());
 
