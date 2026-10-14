@@ -33,6 +33,7 @@
   #detail h2 { margin: 0 0 4px; font-size: 20px; }
   .top { display: flex; justify-content: space-between; gap: 12px; }
   .top a { color: var(--accent); white-space: nowrap; font-size: 14px; }
+  .orig { color: var(--muted); font-size: 13px; margin: 0 0 6px; }
   .meta { color: var(--muted); font-size: 13px; margin-bottom: 16px; }
   .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin-bottom: 20px; }
   .tile { background: var(--tile); border-radius: 6px; padding: 6px 10px; }
@@ -86,7 +87,7 @@ async function load() {
 
 function filtered() {
   const q = $('q').value.trim().toLowerCase(), c = $('country').value;
-  return JOBS.filter(j => (!c || j.country === c) && (!q || [j.title, j.pay, j.en, j.uk].join(' ').toLowerCase().includes(q)));
+  return JOBS.filter(j => (!c || j.country === c) && (!q || [j.title, j.title_uk, j.pay, j.en, j.uk].join(' ').toLowerCase().includes(q)));
 }
 
 function render() {
@@ -94,7 +95,7 @@ function render() {
   $('count').textContent = `${list.length} з ${JOBS.length}`;
   $('list').innerHTML = list.length ? list.map(j => `
     <button class="item ${j.id === current ? 'on' : ''}" data-id="${esc(j.id)}">
-      <b>${esc(j.title)}</b><small class="mono">${esc(j.pay)} · ${esc(j.country)} · ${fmt(j.date)}</small>
+      <b>${esc(j.title_uk || j.title)}</b><small class="mono">${esc(j.pay)} · ${esc(j.country)} · ${fmt(j.date)}</small>
     </button>`).join('') : '<div class="empty">Нічого не знайдено</div>';
 
   const j = JOBS.find(j => j.id === current);
@@ -102,7 +103,8 @@ function render() {
   const tiles = Object.entries(j.client).map(([k, v]) => `<div class="tile"><span class="mono">${esc(k.toUpperCase())}</span>${esc(v)}</div>`).join('');
   const link = /^https?:\/\//.test(j.url) ? `<a href="${esc(j.url)}" target="_blank" rel="noopener">Відкрити на Upwork ↗</a>` : '';
   $('detail').innerHTML = `
-    <div class="top"><h2>${esc(j.title)}</h2>${link}</div>
+    <div class="top"><h2>${esc(j.title_uk || j.title)}</h2>${link}</div>
+    ${j.title_uk ? `<div class="orig">${esc(j.title)}</div>` : ''}
     <div class="meta mono">${esc(j.pay)}${j.proposals ? ` · заявок ${esc(j.proposals)}` : ''} · опубліковано ${fmt(j.date)}</div>
     ${tiles ? `<div class="tiles mono">${tiles}</div>` : ''}
     <div class="cols">
